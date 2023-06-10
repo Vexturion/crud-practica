@@ -14,12 +14,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.TestPropertySource;
 
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.UserService;
 
 @SpringBootTest
+@TestPropertySource(locations = "classpath:application-test.properties")
 class DemoApplicationTests {
 
     @Autowired
@@ -72,32 +74,32 @@ class DemoApplicationTests {
 
     @Test
     public void testUpdateUser() {
-        // Obtener un usuario existente por su ID
+        // Crear un usuario existente con ID 1
         Long userId = 1L;
-        Optional<User> existingUserOptional = userRepository.findById(userId);
+        User existingUser = new User(userId, "John Doe", "john@example.com", "1234567890");
 
-        if (existingUserOptional.isPresent()) {
-            User existingUser = existingUserOptional.get();
+        // Mockear el comportamiento de userRepository.findById()
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
 
-            // Crear una copia del usuario existente con los nuevos datos
-            User updatedUser = new User(existingUser.getId(), "Jane Smith", existingUser.getEmail(),
-                    existingUser.getPhone());
+        // Crear un usuario con los datos actualizados
+        User updatedUser = new User(userId, "Jane Smith", "jane@example.com", "9876543210");
 
-            // Mockear el comportamiento de userRepository.save()
-            when(userRepository.save(updatedUser)).thenReturn(updatedUser);
+        // Mockear el comportamiento de userRepository.save()
+        when(userRepository.save(existingUser)).thenReturn(updatedUser);
 
-            // Llamar al método updateUser() de userService
-            User result = userService.updateUser(updatedUser);
+        // Llamar al método updateUser() de userService
+        User result = userService.updateUser(updatedUser);
 
-            // Verificar que el usuario actualizado tenga los nuevos datos
-            assertEquals(updatedUser, result);
+        // Verificar que el usuario devuelto sea el usuario actualizado
+        assertEquals(updatedUser, result);
 
-            // Verificar que se haya llamado userRepository.save() una vez con el usuario
-            // actualizado
-            verify(userRepository, times(1)).save(updatedUser);
-        } else {
-            fail("User not found with ID: " + userId);
-        }
+        // Verificar que se haya llamado userRepository.findById() una vez con el ID del
+        // usuario
+        verify(userRepository, times(1)).findById(userId);
+
+        // Verificar que se haya llamado userRepository.save() una vez con el usuario
+        // actualizado
+        verify(userRepository, times(1)).save(existingUser);
     }
 
     @Test
